@@ -12,6 +12,20 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: rakuten@admin.com
+      PGADMIN_DEFAULT_PASSWORD: rakutenadmin
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
+
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -28,4 +42,5 @@ services:
 
 volumes:
   pg_data:
+  pgadmin_data:
   minio_data:
