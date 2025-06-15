@@ -19,7 +19,7 @@ def collect_all_files(base_dir):
     for root, _, files in os.walk(base_dir):
         for file in files:
             local_path = os.path.join(root, file)
-            object_name = os.path.relpath(local_path, base_dir)
+            object_name = os.path.relpath(local_path, base_dir).replace("\\", "/")
             file_list.append((local_path, object_name))
     return file_list
 
