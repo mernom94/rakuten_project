@@ -1,0 +1,111 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: rakutenadmin
+      POSTGRES_PASSWORD: rakutenadmin
+      POSTGRES_DB: rakuten_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rakutenadmin -d rakuten_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: rakuten@admin.com
+      PGADMIN_DEFAULT_PASSWORD: rakutenadmin
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: rakutenadmin
+      MINIO_ROOT_PASSWORD: rakutenadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow
+    restart: always
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://rakutenadmin:rakutenadmin@postgres:5432/rakuten_db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    ports:
+      - "5001:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - mlflow_data:/mlflow/artifacts
+    command: >
+      bash -c "
+      pip install mlflow psycopg2-binary &&
+      mlflow server 
+      --backend-store-uri postgresql://rakutenadmin:rakutenadmin@postgres:5432/rakuten_db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+      "
+
+  # MinIO Client to create the bucket for MLflow artifacts
+  minio-mc:
+    image: minio/mc:latest
+    container_name: minio-mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      /usr/bin/mc config host add myminio http://minio:9000 rakutenadmin rakutenadmin;
+      /usr/bin/mc mb myminio/mlflow-artifacts --ignore-existing;
+      /usr/bin/mc policy set public myminio/mlflow-artifacts;
+      exit 0;
+      "
+
+  ml-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - mlflow
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      bash -c "
+      pip install -r requirements.txt &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+
+volumes:
+  pg_data:
+  pgadmin_data:
+  minio_data:
+  mlflow_data:
