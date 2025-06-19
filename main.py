@@ -81,7 +81,7 @@ async def trigger_training(request: TrainingRequest, background_tasks: Backgroun
         training_status["is_training"] = True
         logger.info("Starting training...")
 
-        # ✅ Replace below with call to your actual training function
+
         # For now, simulate a training run and log a dummy model
         import tempfile
         from sklearn.linear_model import LogisticRegression
