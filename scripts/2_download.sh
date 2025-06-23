@@ -17,3 +17,11 @@ wget --header="Cookie: $COOKIE" --header="User-Agent: $UA" "https://challengedat
 wget --header="Cookie: $COOKIE" --header="User-Agent: $UA" "https://challengedata.ens.fr/participants/challenges/35/download/y-train" -O y_train.csv
 wget --header="Cookie: $COOKIE" --header="User-Agent: $UA" "https://challengedata.ens.fr/participants/challenges/35/download/x-test" -O x_test.csv
 wget --header="Cookie: $COOKIE" --header="User-Agent: $UA" "https://challengedata.ens.fr/participants/challenges/35/download/supplementary-files" -O images.zip
+
+
+echo "Extracting images ..."
+cd "$PROJECT_ROOT/raw_data"
+unzip -o images.zip
+
+echo "Deleting zip file ..."
+rm images.zip

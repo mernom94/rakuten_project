@@ -41,7 +41,7 @@ git clone https://github.com/Pockyee/rakuten_project.git
 cd rakuten_project
 ```
 
-### 2. Setup Infrastructure, Environment, and Load Data
+### 2. Setup Infrastructure, Environment
 Follow the automated setup process:
 
 1. **Make scripts executable:**
@@ -51,18 +51,32 @@ Follow the automated setup process:
 
 2. **Run setup scripts in order:**
    ```bash
-   ./scripts/1_download.sh      # Downloads Rakuten dataset automatically
-   ./scripts/2_unzip_install.sh # Installs system dependencies, Docker, creates venv, installs Python packages
-   ./scripts/3_service_load.sh  # Loads data into PostgreSQL + MinIO
+   ./scripts/1_install_docker.sh      # Install Docker and unzip utility
+   ./scripts/2_download.sh            # Download datasets and unzip images package
+   ./scripts/3_run_docker.sh          # Start Docker containers
    ```
+   *Some machines may not be able to start all Docker containers simultaneously due to performance limitations. Please rerun 3_run_docker.sh or directly run `docker compose up -d` in the project root directory.*
 
 3. **Access services:**
-   - **pgAdmin** (database GUI): http://localhost:8081
-   - **MinIO** (object storage GUI): http://localhost:9001
-   - Credentials are in the `docker-compose.yml` file
+
+- **Airflow** (Workflow GUI): [http://localhost:8080](http://localhost:8080)  
+  - **Username:** `airflow`  
+  - **Password:** `airflow`
+
+- **pgAdmin** (database GUI): [http://localhost:8081](http://localhost:8081)  
+  - **Email:** `rakuten@admin.com`  
+  - **Password:** `rakutenadmin`
+
+- **MinIO** (object storage GUI): [http://localhost:9001](http://localhost:9001)  
+  - **Username:** `rakutenadmin`  
+  - **Password:** `rakutenadmin`
    - *If accessing from another machine, replace localhost with your server's IP address*
 
-**Note:** The scripts handle everything - system packages, Docker installation, Python virtual environment, and data loading.
+**Note:** The scripts handle - system packages, Docker installation, and data loading.
+
+### 3. Load data
+
+Enter the Airflow UI and run the prepare_data DAG. After it completes successfully, the XCom under load_test_image should return the value 2762, and the XCom under load_train_image should return the value 16983. By default, 20% of the data is loaded into the database.
 
 ### 4. Run the Application
 ```bash
