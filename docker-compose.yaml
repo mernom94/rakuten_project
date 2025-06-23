@@ -45,6 +45,7 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
 
+# MLflow server setup
   mlflow:
     image: python:3.11-slim
     container_name: mlflow
