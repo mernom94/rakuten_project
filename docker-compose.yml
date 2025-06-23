@@ -138,6 +138,32 @@ services:
       retries: 5
     command: server /data --console-address ":9001"
 
+
+# MLflow server setup
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow
+    restart: always
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://rakutenadmin:rakutenadmin@postgres:5432/rakuten_db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    ports:
+      - "5001:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - mlflow_data:/mlflow/artifacts
+    command: >
+      bash -c "
+      pip install mlflow psycopg2-binary &&
+      mlflow server 
+      --backend-store-uri postgresql://rakutenadmin:rakutenadmin@postgres:5432/rakuten_db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+      "
+
   redis:
     # Redis is limited to 7.2-bookworm due to licencing change
     # https://redis.io/blog/redis-adopts-dual-source-available-licensing/
@@ -372,3 +398,4 @@ volumes:
   postgres-db-volume:
   pgadmin_data:
   minio_data:
+  mlflow_data:
