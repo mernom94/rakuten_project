@@ -7,6 +7,7 @@ This project demonstrates a complete MLOps pipeline for the [Rakuten product cla
 - **Task**: Classify products into categories using text and image data
 - **Focus**: MLOps infrastructure (MLflow, FastAPI, Docker, model versioning)
 - **Models**: Classical ML pipeline with XGBoost, Random Forest, Logistic Regression, and SVM (with plans to integrate deep learning models later)
+- **Current Performance**: SVM achieves 73.4% F1 score on French text classification
 
 ## Project Structure
 
@@ -14,19 +15,33 @@ This project demonstrates a complete MLOps pipeline for the [Rakuten product cla
 rakuten_project/
 ├── config/                  # Configuration files
 │   └── airflow.cfg         # Airflow configuration
-├── scripts/                 # Setup and data loading scripts
-│   ├── 1_download.sh       # Downloads Rakuten dataset
-│   ├── 2_unzip_install.sh  # Extracts and installs
-│   └── 3_service_load.sh   # Loads data into PostgreSQL + MinIO
-├── src/                     # Source code
+├── dags/                    # Airflow DAGs for workflow orchestration
+│   ├── ml_pipeline_dag.py  # PythonOperator ML pipeline
+│   ├── ml_pipeline_docker_dag.py  # DockerOperator ML pipeline
+│   ├── prepare_data_dag.py # Data preparation workflow
+│   └── tasks/              # Airflow task modules
+│       ├── ml_tasks.py     # ML pipeline tasks
+│       ├── upload.py       # Data upload functions
+│       └── utils.py        # Utility functions
+├── scripts/                 # Setup and ML scripts
+│   ├── 1_install_docker.sh # Install Docker and dependencies
+│   ├── 2_download.sh       # Downloads Rakuten dataset
+│   ├── 3_run_docker.sh     # Start Docker services
+│   ├── preprocessing.py    # Text preprocessing and feature extraction
+│   └── training.py         # Model training with GridSearchCV
+├── processed_data/          # Generated ML features and metadata
+├── models/                  # Trained models and encoders
+├── raw_data/               # Original dataset storage
+├── src/                     # Source code (legacy)
 │   ├── load_minio.py       # MinIO object storage operations
 │   ├── load_postgres.py    # PostgreSQL database operations
-│   └── (ML pipeline components to be added)
+│   └── (API components to be added)
+├── Dockerfile              # ML container definition
+├── requirements_ml.txt     # ML-specific dependencies
 ├── .env                    # Environment variables
 ├── .gitignore
 ├── docker-compose.yml      # Docker services configuration
-├── docker-compose.backup.yaml  # Backup Docker configuration
-├── requirements.txt
+├── requirements.txt        # Main project dependencies
 ├── servers.json           # Database server configuration
 └── README.md              # This file
 ```
@@ -72,13 +87,40 @@ Follow the automated setup process:
   - **Password:** `rakutenadmin`
    - *If accessing from another machine, replace localhost with your server's IP address*
 
-**Note:** The scripts handle - system packages, Docker installation, and data loading.
+**Note:** The scripts handle system packages, Docker installation, and data loading.
 
-### 3. Load data
+### 3. Load Data
 
 Enter the Airflow UI and run the prepare_data DAG. After it completes successfully, the XCom under load_test_image should return the value 2762, and the XCom under load_train_image should return the value 16983. By default, 20% of the data is loaded into the database.
 
-### 4. Run the Application
+### 4. Build ML Container
+
+```bash
+# Build the containerized ML environment
+docker build -t rakuten-ml:latest .
+```
+
+### 5. Run ML Pipeline
+
+#### Option A: Direct Container Execution
+```bash
+# Preprocessing: Extract features from French text data
+docker run --rm --network rakuten_project_default \
+  -v $(pwd):/app -w /app \
+  rakuten-ml:latest python scripts/preprocessing.py
+
+# Training: Train models with GridSearchCV
+docker run --rm --network rakuten_project_default \
+  -v $(pwd):/app -w /app \
+  rakuten-ml:latest python scripts/training.py
+```
+
+#### Option B: Airflow DAG
+1. Access Airflow UI: [http://localhost:8080](http://localhost:8080)
+2. Trigger DAG: `ml_pipeline_docker`
+3. Monitor execution in the UI
+
+### 6. Run the Application (Future)
 ```bash
 # Start the API
 python -m uvicorn src.api.main:app --reload
@@ -86,6 +128,44 @@ python -m uvicorn src.api.main:app --reload
 # Run MLflow UI
 mlflow ui
 ```
+
+## ML Pipeline Components
+
+### Text Preprocessing (`scripts/preprocessing.py`)
+- **Input**: Raw French product descriptions from PostgreSQL
+- **Processing**: 
+  - Text cleaning and French stopword removal
+  - Multiple text versions (raw, classical ML, BERT-ready)
+  - TF-IDF feature extraction (1000 features)
+- **Output**: Processed features, targets, and vectorizer saved to `processed_data/`
+
+### Model Training (`scripts/training.py`)
+- **Input**: Preprocessed features from previous step
+- **Algorithms**: Random Forest, Logistic Regression, SVM, XGBoost
+- **Optimization**: GridSearchCV with 3-fold cross-validation
+- **Evaluation**: Weighted F1 score, accuracy, classification report
+- **Output**: Best model and metadata saved to `models/`
+
+### Current ML Performance
+- **Dataset**: 16,983 French product descriptions across 27 categories
+- **Best Algorithm**: SVM with linear kernel
+- **Test F1 Score**: 73.4%
+- **Test Accuracy**: 73.1%
+- **Cross-validation Score**: 71.6%
+
+## Docker Architecture
+
+### ML Container (`rakuten-ml:latest`)
+- **Base**: Python 3.9 slim
+- **Dependencies**: scikit-learn, nltk, xgboost, pandas, psycopg2, etc.
+- **Purpose**: Isolated environment for ML workloads with all required dependencies
+- **Usage**: Runs both preprocessing and training scripts
+
+### Infrastructure Containers
+- **Airflow**: Workflow orchestration and scheduling
+- **PostgreSQL**: Structured data storage (text features, metadata)
+- **MinIO**: Object storage for images and large files
+- **Redis**: Airflow message broker and caching
 
 ## MLOps Metrics
 
@@ -109,29 +189,93 @@ The following metrics will be tracked and displayed in a Grafana Dashboard (mode
 - Latency
 - CPU usage
 
+**Model Performance Tracking:**
+- F1 Score, Accuracy, Precision, Recall
+- Hyperparameter configurations
+- Training time and resource usage
+- Model versions and deployment history
+
 ## Technology Stack
 
+- **Orchestration**: Apache Airflow
 - **Database**: PostgreSQL (containerized)
 - **Object Storage**: MinIO (for images)
-- **ML Tracking**: MLflow
-- **API**: FastAPI
-- **Containerization**: Docker
+- **ML Pipeline**: Docker containers with scikit-learn stack
+- **ML Tracking**: MLflow (in development)
+- **API**: FastAPI (in development)
+- **Containerization**: Docker and Docker Compose
 - **Models**: Scikit-learn (XGBoost, Random Forest, Logistic Regression, SVM)
+- **Text Processing**: NLTK, TF-IDF vectorization
 - **Testing**: Pytest
-- **Monitoring**: Grafana Dashboard
-- **Data Quality/Drift**: Custom monitoring pipeline
+- **Monitoring**: Grafana Dashboard (planned)
+- **Data Quality/Drift**: Custom monitoring pipeline (planned)
+
+## Development Workflow
+
+### For ML Development
+1. Create feature branch from main
+2. Develop ML scripts in `scripts/` directory
+3. Test using Docker container: `docker run --rm --network rakuten_project_default -v $(pwd):/app -w /app rakuten-ml:latest python scripts/your_script.py`
+4. Create or update Airflow DAGs in `dags/`
+5. Test DAG execution in Airflow UI
+6. Submit pull request with comprehensive testing
+
+### For Infrastructure Development
+1. Modify Docker configurations or add new services
+2. Test with `docker-compose up -d`
+3. Verify service interactions
+4. Update documentation and README
+5. Submit pull request
 
 ## Team Development
 
 Each team member should:
 1. Clone this repository
 2. Set up local development environment (virtual environment + requirements)
-3. Run Qi's setup scripts to initialize Docker infrastructure
-4. Develop and test locally
+3. Run setup scripts to initialize Docker infrastructure
+4. Build ML container for ML development work
+5. Develop and test locally using containerized approach
+
+## Troubleshooting
+
+### Common Issues
+
+**Container build fails:**
+```bash
+# Clear Docker cache and rebuild
+docker system prune -f
+docker build --no-cache -t rakuten-ml:latest .
+```
+
+**ML scripts can't connect to database:**
+- Ensure containers are on same network: `rakuten_project_default`
+- Check PostgreSQL is running: `docker ps | grep postgres`
+- Verify database contains data by running prepare_data DAG
+
+**Airflow DAG not appearing:**
+- Check DAG syntax: `python dags/ml_pipeline_docker_dag.py`
+- Refresh Airflow UI
+- Check Airflow scheduler logs
+
+**Package installation issues:**
+- Use Docker approach instead of installing packages on host
+- Check `requirements_ml.txt` for ML-specific dependencies
+- Ensure NLTK data downloads correctly in container
 
 ## Contributing
 
 1. Create feature branch from main
-2. Make changes and test locally
-3. Submit pull request
-4. Ensure all tests pass
+2. Make changes and test locally using Docker containers
+3. Ensure all ML scripts work in containerized environment
+4. Update documentation as needed
+5. Submit pull request with detailed description
+6. Ensure all tests pass and DAGs execute successfully
+
+## Future Enhancements
+
+- **MLflow Integration**: Complete model tracking and registry
+- **FastAPI Service**: Model serving endpoints with MLflow integration
+- **Streamlit Dashboard**: ML results visualization and monitoring
+- **Model Versioning**: Automated model deployment pipeline
+- **Performance Monitoring**: Real-time model drift detection
+- **Deep Learning**: Integration of BERT and image classification models
