@@ -45,3 +45,5 @@ black>=23.0.0           # Automatic code formatter (ensures consistent code styl
 flake8>=6.0.0          # Code linter (finds style issues and potential bugs)
 
 # Note: If using Docker containers for development, these tools can be run inside containers instead
+# Natural Language Processing
+nltk==3.8.1

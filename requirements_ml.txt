@@ -1,0 +1,22 @@
+# ML Container Dependencies
+# Only packages needed for preprocessing and training scripts
+
+# Core ML and Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+scipy>=1.10.0
+
+# Natural Language Processing
+nltk>=3.8.0
+
+# Database Connection
+psycopg2-binary>=2.9.0
+SQLAlchemy>=2.0.0
+
+# MLflow (for when marie's setup is ready)
+mlflow>=2.8.0
+
+# Utilities
+tqdm>=4.65.0
