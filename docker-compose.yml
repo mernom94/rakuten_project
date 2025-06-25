@@ -63,6 +63,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW_CONN_MINIO_DEFAULT: aws://rakutenadmin:rakutenadmin@minio:9000
+    AIRFLOW_PROJECT_ROOT: ${PROJECT_ROOT}
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -79,7 +80,8 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/raw_data:/opt/airflow/raw_data
-  user: "${AIRFLOW_UID:-50000}:0"
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "0:0"
   depends_on:
     &airflow-common-depends-on
     redis:

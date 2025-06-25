@@ -215,12 +215,12 @@ def save_gridsearch_model(results, preprocessing_metadata, text_version='text_cl
         'encoder_path': encoder_path,
         'model_type': 'gridsearch_best',
         'text_version_used': text_version,
-        'best_params': results['best_params'],
-        'performance': {
-            'best_cv_score': results['best_cv_score'],
-            'test_f1_score': results['test_f1_score'],
-            'test_accuracy': results['test_accuracy']
-        },
+        # 'best_params': results['best_params'],
+        # 'performance': {
+        #     'best_cv_score': results['best_cv_score'],
+        #     'test_f1_score': results['test_f1_score'],
+        #     'test_accuracy': results['test_accuracy']
+        # },
         'training_approach': 'gridsearch_with_pipeline',
         'scoring_metric': 'f1_weighted',
         'cv_folds': 3,

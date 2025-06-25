@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir -r requirements_ml.txt
 RUN python -c "import nltk; nltk.download('stopwords', quiet=True)"
 
 # Copy ML scripts
-COPY scripts/ ./scripts/
+COPY training.py ./scripts/training.py
+COPY preprocessing.py ./scripts/preprocessing.py
 
 # Create directories for data and models
 RUN mkdir -p processed_data models

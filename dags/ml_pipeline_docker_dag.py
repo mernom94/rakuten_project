@@ -2,7 +2,11 @@ from airflow import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.operators.python import PythonOperator
 from datetime import datetime
+from docker.types import Mount
 import os
+
+# Read Project root from .env
+PROJECT_ROOT = os.environ.get('AIRFLOW_PROJECT_ROOT') 
 
 # DAG for ML pipeline using DockerOperator
 with DAG(
@@ -85,16 +89,16 @@ with DAG(
         command='python scripts/preprocessing.py',
         docker_url='unix://var/run/docker.sock',
         network_mode='rakuten_project_default',  # Connect to your project's Docker network
-        volumes=[
-            '/opt/airflow/processed_data:/app/processed_data',
-            '/opt/airflow/models:/app/models',
-            '/opt/airflow/scripts:/app/scripts'
+        mounts=[
+            Mount(source=f'{PROJECT_ROOT}/processed_data', target='/app/processed_data', type='bind'),
+            Mount(source=f'{PROJECT_ROOT}/models', target='/app/models', type='bind'),
         ],
         environment={
             'PYTHONPATH': '/app',
             'PYTHONUNBUFFERED': '1'
         },
-        auto_remove=True,
+        auto_remove='success',
+        mount_tmp_dir=False,
         doc_md="""
         ## Preprocessing Docker Task
         
@@ -118,16 +122,16 @@ with DAG(
         command='python scripts/training.py',
         docker_url='unix://var/run/docker.sock',
         network_mode='rakuten_project_default',  # Connect to your project's Docker network
-        volumes=[
-            '/opt/airflow/processed_data:/app/processed_data',
-            '/opt/airflow/models:/app/models',
-            '/opt/airflow/scripts:/app/scripts'
+        mounts=[
+            Mount(source=f'{PROJECT_ROOT}/processed_data', target='/app/processed_data', type='bind'),
+            Mount(source=f'{PROJECT_ROOT}/models', target='/app/models', type='bind'),
         ],
         environment={
             'PYTHONPATH': '/app',
             'PYTHONUNBUFFERED': '1'
         },
-        auto_remove=True,
+        auto_remove='success',
+        mount_tmp_dir=False,
         doc_md="""
         ## Training Docker Task
         
