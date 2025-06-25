@@ -91,18 +91,22 @@ Follow the automated setup process:
 
 ### 3. Load Data
 
-Enter the Airflow UI and run the prepare_data DAG. After it completes successfully, the XCom under load_test_image should return the value 2762, and the XCom under load_train_image should return the value 16983. By default, 20% of the data is loaded into the database.
+1. Access Airflow UI: [http://localhost:8080](http://localhost:8080)
+2. Trigger DAG: `prepare_data`
+3. Monitor execution in the UI
 
-### 4. Build ML Container
+*The XCom under load_test_image should return the value 2762, and the XCom under load_train_image should return the value 16983. By default, 20% of the data is loaded into the database.*
+
+<!-- ### 4. Build ML Container
 
 ```bash
 # Build the containerized ML environment
 docker build -t rakuten-ml:latest .
-```
+``` -->
 
-### 5. Run ML Pipeline
+### 4. Run ML Pipeline
 
-#### Option A: Direct Container Execution
+<!-- #### Option A: Direct Container Execution
 ```bash
 # Preprocessing: Extract features from French text data
 docker run --rm --network rakuten_project_default \
@@ -115,12 +119,12 @@ docker run --rm --network rakuten_project_default \
   rakuten-ml:latest python scripts/training.py
 ```
 
-#### Option B: Airflow DAG
+#### Option B: Airflow DAG -->
 1. Access Airflow UI: [http://localhost:8080](http://localhost:8080)
 2. Trigger DAG: `ml_pipeline_docker`
 3. Monitor execution in the UI
 
-### 6. Run the Application (Future)
+### 5. Run the Application (Future)
 ```bash
 # Start the API
 python -m uvicorn src.api.main:app --reload
