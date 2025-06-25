@@ -2,4 +2,5 @@
 /venv
 /logs
 /dags/__pycache__
-/dags/tasks/__pycache__
+/dags/tasks/__pycache__models/
+processed_data/
