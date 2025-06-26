@@ -22,6 +22,7 @@ import os
 from datetime import datetime
 from scipy.sparse import load_npz
 from collections import Counter
+import mlflow
 
 # Directories
 PROCESSED_DATA_DIR = 'processed_data'
@@ -208,90 +209,114 @@ def save_gridsearch_model(results, preprocessing_metadata, text_version='text_cl
     with open(encoder_path, 'wb') as f:
         pickle.dump(results['label_encoder'], f)
     
-    # Create comprehensive metadata
-    model_metadata = {
-        'timestamp': timestamp,
-        'model_path': model_path,
-        'encoder_path': encoder_path,
-        'model_type': 'gridsearch_best',
-        'text_version_used': text_version,
-        'best_params': results['best_params'],
-        'performance': {
-            'best_cv_score': results['best_cv_score'],
-            'test_f1_score': results['test_f1_score'],
-            'test_accuracy': results['test_accuracy']
-        },
-        'training_approach': 'gridsearch_with_pipeline',
-        'scoring_metric': 'f1_weighted',
-        'cv_folds': 3,
-        'preprocessing_info': {
-            'preprocessing_timestamp': preprocessing_metadata['timestamp'],
-            'n_features_used': preprocessing_metadata['n_features'],
-            'n_samples': preprocessing_metadata['n_samples']
-        }
-    }
+    # # Create comprehensive metadata
+    # model_metadata = {
+    #     'timestamp': timestamp,
+    #     'model_path': model_path,
+    #     'encoder_path': encoder_path,
+    #     'model_type': 'gridsearch_best',
+    #     'text_version_used': text_version,
+    #     'best_params': results['best_params'],
+    #     'performance': {
+    #         'best_cv_score': results['best_cv_score'],
+    #         'test_f1_score': results['test_f1_score'],
+    #         'test_accuracy': results['test_accuracy']
+    #     },
+    #     'training_approach': 'gridsearch_with_pipeline',
+    #     'scoring_metric': 'f1_weighted',
+    #     'cv_folds': 3,
+    #     'preprocessing_info': {
+    #         'preprocessing_timestamp': preprocessing_metadata['timestamp'],
+    #         'n_features_used': preprocessing_metadata['n_features'],
+    #         'n_samples': preprocessing_metadata['n_samples']
+    #     }
+    # }
     
-    # Save model metadata
-    metadata_path = os.path.join(MODELS_DIR, f'gridsearch_metadata_{timestamp}.json')
-    with open(metadata_path, 'w') as f:
-        metadata_for_json = model_metadata.copy()
-        metadata_for_json.pop('best_estimator', None)  # Remove the SVM model object
+    # # Save model metadata
+    # metadata_path = os.path.join(MODELS_DIR, f'gridsearch_metadata_{timestamp}.json')
+    # with open(metadata_path, 'w') as f:
+    #     metadata_for_json = model_metadata.copy()
+    #     metadata_for_json.pop('best_estimator', None)  # Remove the SVM model object
 
-        json.dump(metadata_for_json, f, indent=2)
+    #     json.dump(metadata_for_json, f, indent=2)
     
-    # Save as "latest" for easy access
-    latest_model_path = os.path.join(MODELS_DIR, 'latest_gridsearch_model.json')
-    with open(latest_model_path, 'w') as f:
-        metadata_for_json = model_metadata.copy()
-        metadata_for_json.pop('best_estimator', None)  # Remove the SVM model object
+    # # Save as "latest" for easy access
+    # latest_model_path = os.path.join(MODELS_DIR, 'latest_gridsearch_model.json')
+    # with open(latest_model_path, 'w') as f:
+    #     metadata_for_json = model_metadata.copy()
+    #     metadata_for_json.pop('best_estimator', None)  # Remove the SVM model object
 
-        json.dump(metadata_for_json, f, indent=2)
+    #     json.dump(metadata_for_json, f, indent=2)
     
-    print(f"Best model saved: {model_path}")
-    print(f"Label encoder saved: {encoder_path}")
-    print(f"Metadata saved: {metadata_path}")
+    # print(f"Best model saved: {model_path}")
+    # print(f"Label encoder saved: {encoder_path}")
+    # print(f"Metadata saved: {metadata_path}")
     
-    return model_metadata
+    # return model_metadata
 
 def main():
-    """Main training pipeline with GridSearchCV"""
+    import mlflow
+    import os
+
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000"))
+    mlflow.set_experiment(os.environ.get("MLFLOW_EXPERIMENT_NAME", "default"))
+
     print("Starting GridSearchCV training pipeline...")
     print("Based on proven approach from previous project")
     print("=" * 60)
-    
+
     try:
-        # Step 1: Load preprocessed data
-        text_df, preprocessing_metadata = load_latest_processed_data()
-        
-        # Step 2: Extract features and target (using classical ML text)
-        X = text_df['text_classical']  # Use heavily preprocessed text
-        y = text_df['prdtypecode']
-        
-        print(f"Using text_classical for training ({len(X)} samples)")
-        
-        # Step 3: Create stratified train/test split
-        X_train, X_test, y_train, y_test = create_stratified_split(X, y)
-        
-        # Step 4: Set up pipeline and parameter grid
-        pipeline, param_grid = create_pipeline_and_param_grid()
-        
-        # Step 5: Train with GridSearchCV
-        results = train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid)
-        
-        # Step 6: Save best model
-        model_metadata = save_gridsearch_model(results, preprocessing_metadata)
-        
-        print("=" * 60)
-        print("TRAINING COMPLETED SUCCESSFULLY!")
-        print(f"Best F1 Score: {results['test_f1_score']:.4f}")
-        print(f"Best Parameters: {results['best_params']}")
-        print("=" * 60)
-        
+        with mlflow.start_run():
+            # Step 1: Load preprocessed data
+            text_df, preprocessing_metadata = load_latest_processed_data()
+            
+            # Step 2: Extract features and target (using classical ML text)
+            X = text_df['text_classical']
+            y = text_df['prdtypecode']
+            
+            print(f"Using text_classical for training ({len(X)} samples)")
+            
+            # Step 3: Create stratified train/test split
+            X_train, X_test, y_train, y_test = create_stratified_split(X, y)
+            
+            # Step 4: Set up pipeline and parameter grid
+            pipeline, param_grid = create_pipeline_and_param_grid()
+            
+            # Step 5: Train with GridSearchCV
+            results = train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid)
+            
+            # Step 6: Save best model
+            model_metadata = save_gridsearch_model(results, preprocessing_metadata)
+
+            # Log hyperparameters
+            mlflow.log_params(grid_search.best_params_)
+            
+            # Log performance metrics
+            mlflow.log_metrics({
+                "cv_score": grid_search.best_score_,
+                "test_f1": test_f1,
+                "test_accuracy": test_accuracy
+            })
+            
+            # Log the trained model
+            mlflow.sklearn.log_model(grid_search.best_estimator_, "model")
+            
+            # Log preprocessing metadata
+            mlflow.log_params({
+                "n_samples": len(X_train) + len(X_test),
+                "n_features": X_train.shape[1],
+                "text_version": "text_classical"
+            })
+            
+            print("=" * 60)
+            print("TRAINING COMPLETED SUCCESSFULLY!")
+            print(f"Best F1 Score: {results['test_f1_score']:.4f}")
+            print(f"Best Parameters: {results['best_params']}")
+            print("=" * 60)
+
     except Exception as e:
         print(f"Error during training: {e}")
         raise
 
 if __name__ == "__main__":
     main()
-
-
