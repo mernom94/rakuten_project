@@ -22,10 +22,15 @@ import os
 from datetime import datetime
 from scipy.sparse import load_npz
 from collections import Counter
+import mlflow
+import mlflow.sklearn
 
 # Directories
 PROCESSED_DATA_DIR = 'processed_data'
 MODELS_DIR = 'models'
+
+mlflow.set_tracking_uri("http://mlflow:5000")
+mlflow.set_experiment("RakutenTraining")
 
 def load_latest_processed_data():
     """Load the most recent preprocessed data"""
@@ -165,6 +170,13 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
     print("=" * 60)
     print("Best Parameters:", grid_search.best_params_)
     print("Best Cross-Validation Score:", grid_search.best_score_)
+
+            # Log hyperparameters
+    mlflow.log_params(grid_search.best_params_)
+    
+    
+    # Log the trained model
+    mlflow.sklearn.log_model(grid_search.best_estimator_, "model")
     
     # Predict on the test set
     y_test_pred_encoded = grid_search.best_estimator_.predict(X_test)
@@ -188,6 +200,12 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
         'label_encoder': label_encoder,
         'best_estimator': grid_search.best_estimator_
     }
+            # Log performance metrics
+    mlflow.log_metrics({
+        "cv_score": float(grid_search.best_score_),
+        "test_f1": float(test_f1),
+        "test_accuracy": float(test_accuracy)
+    })
     
     return results
 
@@ -258,6 +276,7 @@ def main():
     print("Starting GridSearchCV training pipeline...")
     print("Based on proven approach from previous project")
     print("=" * 60)
+    with mlflow.start_run()
     
     try:
         # Step 1: Load preprocessed data
@@ -287,6 +306,15 @@ def main():
         print(f"Best Parameters: {results['best_params']}")
         print("=" * 60)
         
+        # Log preprocessing metadata
+        mlflow.log_params({
+            "n_samples": len(X_train) + len(X_test),
+            "n_features": X_train.shape[1],
+            "text_version": "text_classical"
+        })
+
+        mlflow.end_run()
+            
     except Exception as e:
         print(f"Error during training: {e}")
         raise
