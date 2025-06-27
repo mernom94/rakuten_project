@@ -276,48 +276,48 @@ def main():
     print("Starting GridSearchCV training pipeline...")
     print("Based on proven approach from previous project")
     print("=" * 60)
-    with mlflow.start_run()
-    
-    try:
-        # Step 1: Load preprocessed data
-        text_df, preprocessing_metadata = load_latest_processed_data()
+    with mlflow.start_run():
         
-        # Step 2: Extract features and target (using classical ML text)
-        X = text_df['text_classical']  # Use heavily preprocessed text
-        y = text_df['prdtypecode']
-        
-        print(f"Using text_classical for training ({len(X)} samples)")
-        
-        # Step 3: Create stratified train/test split
-        X_train, X_test, y_train, y_test = create_stratified_split(X, y)
-        
-        # Step 4: Set up pipeline and parameter grid
-        pipeline, param_grid = create_pipeline_and_param_grid()
-        
-        # Step 5: Train with GridSearchCV
-        results = train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid)
-        
-        # Step 6: Save best model
-        model_metadata = save_gridsearch_model(results, preprocessing_metadata)
-        
-        print("=" * 60)
-        print("TRAINING COMPLETED SUCCESSFULLY!")
-        print(f"Best F1 Score: {results['test_f1_score']:.4f}")
-        print(f"Best Parameters: {results['best_params']}")
-        print("=" * 60)
-        
-        # Log preprocessing metadata
-        mlflow.log_params({
-            "n_samples": len(X_train) + len(X_test),
-            "n_features": X_train.shape[1],
-            "text_version": "text_classical"
-        })
-
-        mlflow.end_run()
+        try:
+            # Step 1: Load preprocessed data
+            text_df, preprocessing_metadata = load_latest_processed_data()
             
-    except Exception as e:
-        print(f"Error during training: {e}")
-        raise
+            # Step 2: Extract features and target (using classical ML text)
+            X = text_df['text_classical']  # Use heavily preprocessed text
+            y = text_df['prdtypecode']
+            
+            print(f"Using text_classical for training ({len(X)} samples)")
+            
+            # Step 3: Create stratified train/test split
+            X_train, X_test, y_train, y_test = create_stratified_split(X, y)
+            
+            # Step 4: Set up pipeline and parameter grid
+            pipeline, param_grid = create_pipeline_and_param_grid()
+            
+            # Step 5: Train with GridSearchCV
+            results = train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid)
+            
+            # Step 6: Save best model
+            model_metadata = save_gridsearch_model(results, preprocessing_metadata)
+            
+            print("=" * 60)
+            print("TRAINING COMPLETED SUCCESSFULLY!")
+            print(f"Best F1 Score: {results['test_f1_score']:.4f}")
+            print(f"Best Parameters: {results['best_params']}")
+            print("=" * 60)
+            
+            # Log preprocessing metadata
+            mlflow.log_params({
+                "n_samples": len(X_train) + len(X_test),
+                "n_features": 1 if isinstance(X_train, pd.Series) else X_train.shape[1],
+                "text_version": "text_classical"
+            })
+
+        # mlflow.end_run()
+            
+        except Exception as e:
+            print(f"Error during training: {e}")
+            raise
 
 if __name__ == "__main__":
     main()
