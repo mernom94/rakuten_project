@@ -23,12 +23,16 @@ rakuten_project/
 │       ├── ml_tasks.py     # ML pipeline tasks
 │       ├── upload.py       # Data upload functions
 │       └── utils.py        # Utility functions
-├── scripts/                 # Setup and ML scripts
+├── containers/              # Docker container definitions
+│   └── rakuten-ml/         # ML pipeline container
+│       ├── Dockerfile      
+│       ├── preprocessing.py 
+│       ├── training.py     # Model training with GridSearchCV
+│       └── requirements_ml.txt # ML-specific dependencies
+├── scripts/                 # Setup scripts only
 │   ├── 1_install_docker.sh # Install Docker and dependencies
 │   ├── 2_download.sh       # Downloads Rakuten dataset
-│   ├── 3_run_docker.sh     # Start Docker services
-│   ├── preprocessing.py    # Text preprocessing and feature extraction
-│   └── training.py         # Model training with GridSearchCV
+│   └── 3_run_docker.sh     # Start Docker services
 ├── processed_data/          # Generated ML features and metadata
 ├── models/                  # Trained models and encoders
 ├── raw_data/               # Original dataset storage
@@ -36,8 +40,6 @@ rakuten_project/
 │   ├── load_minio.py       # MinIO object storage operations
 │   ├── load_postgres.py    # PostgreSQL database operations
 │   └── (API components to be added)
-├── Dockerfile              # ML container definition
-├── requirements_ml.txt     # ML-specific dependencies
 ├── .env                    # Environment variables
 ├── .gitignore
 ├── docker-compose.yml      # Docker services configuration
@@ -78,6 +80,10 @@ Follow the automated setup process:
   - **Username:** `airflow`  
   - **Password:** `airflow`
 
+- **MLflow** (Experiment Tracking): [http://localhost:5001](http://localhost:5001)  
+  - **Username:** None required  
+  - **Password:** None required
+
 - **pgAdmin** (database GUI): [http://localhost:8081](http://localhost:8081)  
   - **Email:** `rakuten@admin.com`  
   - **Password:** `rakutenadmin`
@@ -97,26 +103,26 @@ Follow the automated setup process:
 
 *The XCom under load_test_image should return the value 2762, and the XCom under load_train_image should return the value 16983. By default, 20% of the data is loaded into the database.*
 
-<!-- ### 4. Build ML Container
+### 4. Build ML Container
 
 ```bash
 # Build the containerized ML environment
 docker build -t rakuten-ml:latest .
-``` -->
+``` 
 
-### 4. Run ML Pipeline
+### 5. Run ML Pipeline
 
 <!-- #### Option A: Direct Container Execution
 ```bash
 # Preprocessing: Extract features from French text data
 docker run --rm --network rakuten_project_default \
   -v $(pwd):/app -w /app \
-  rakuten-ml:latest python scripts/preprocessing.py
+  rakuten-ml:latest python containers/rakuten-ml/preprocessing.py
 
 # Training: Train models with GridSearchCV
 docker run --rm --network rakuten_project_default \
   -v $(pwd):/app -w /app \
-  rakuten-ml:latest python scripts/training.py
+  rakuten-ml:latest python containers/rakuten-ml/training.py
 ```
 
 #### Option B: Airflow DAG -->
@@ -124,18 +130,17 @@ docker run --rm --network rakuten_project_default \
 2. Trigger DAG: `ml_pipeline_docker`
 3. Monitor execution in the UI
 
-### 5. Run the Application (Future)
-```bash
-# Start the API
-python -m uvicorn src.api.main:app --reload
+### 6. View Results
 
-# Run MLflow UI
-mlflow ui
-```
+- **MLflow UI** (Experiment Tracking): [http://localhost:5001](http://localhost:5001)
+- **API** (Future): FastAPI service in development
+
+**Note:** MLflow runs automatically via Docker - no manual startup needed.
+
 
 ## ML Pipeline Components
 
-### Text Preprocessing (`scripts/preprocessing.py`)
+### Text Preprocessing (`containers/rakuten-ml/preprocessing.py`)
 - **Input**: Raw French product descriptions from PostgreSQL
 - **Processing**: 
   - Text cleaning and French stopword removal
@@ -143,7 +148,7 @@ mlflow ui
   - TF-IDF feature extraction (1000 features)
 - **Output**: Processed features, targets, and vectorizer saved to `processed_data/`
 
-### Model Training (`scripts/training.py`)
+### Model Training (`containers/rakuten-ml/training.py`)
 - **Input**: Preprocessed features from previous step
 - **Algorithms**: Random Forest, Logistic Regression, SVM, XGBoost
 - **Optimization**: GridSearchCV with 3-fold cross-validation
@@ -205,7 +210,7 @@ The following metrics will be tracked and displayed in a Grafana Dashboard (mode
 - **Database**: PostgreSQL (containerized)
 - **Object Storage**: MinIO (for images)
 - **ML Pipeline**: Docker containers with scikit-learn stack
-- **ML Tracking**: MLflow (in development)
+- **ML Tracking**: MLflow
 - **API**: FastAPI (in development)
 - **Containerization**: Docker and Docker Compose
 - **Models**: Scikit-learn (XGBoost, Random Forest, Logistic Regression, SVM)
@@ -218,8 +223,8 @@ The following metrics will be tracked and displayed in a Grafana Dashboard (mode
 
 ### For ML Development
 1. Create feature branch from main
-2. Develop ML scripts in `scripts/` directory
-3. Test using Docker container: `docker run --rm --network rakuten_project_default -v $(pwd):/app -w /app rakuten-ml:latest python scripts/your_script.py`
+2. Develop ML scripts in `containers/rakuten-ml/` directory
+3. Test using Docker container: `docker run --rm --network rakuten_project_default -v $(pwd)/containers/rakuten-ml:/app -w /app rakuten-ml:latest python your_script.py`
 4. Create or update Airflow DAGs in `dags/`
 5. Test DAG execution in Airflow UI
 6. Submit pull request with comprehensive testing
@@ -277,7 +282,6 @@ docker build --no-cache -t rakuten-ml:latest .
 
 ## Future Enhancements
 
-- **MLflow Integration**: Complete model tracking and registry
 - **FastAPI Service**: Model serving endpoints with MLflow integration
 - **Streamlit Dashboard**: ML results visualization and monitoring
 - **Model Versioning**: Automated model deployment pipeline
