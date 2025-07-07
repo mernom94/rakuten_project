@@ -21,13 +21,13 @@ with DAG(
         python_callable=download_raw_data,
     )
     
-    task_2 = PythonOperator(
-        task_id='unzip_image',
-        python_callable= unzip_file,
-        op_kwargs={
-            'zip_path': "/opt/airflow/raw_data/images.zip",
-            'extract_to': "/opt/airflow/raw_data/"
-        }  
-    )
+    # task_2 = PythonOperator(
+    #     task_id='unzip_image',
+    #     python_callable= unzip_file,
+    #     op_kwargs={
+    #         'zip_path': "/opt/airflow/raw_data/images.zip",
+    #         'extract_to': "/opt/airflow/raw_data/"
+    #     }  
+    # )
     
-    task_1 >> task_2
+    # task_1 >> task_2

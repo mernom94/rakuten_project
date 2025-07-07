@@ -1,16 +1,16 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
-from tasks.upload import load_x_to_pg, load_y_to_pg, load_images
-from tasks.utils import unzip_file, create_minio_bucket
+from tasks.upload import load_x_to_pg, load_y_to_pg
+# from tasks.utils import unzip_file, create_minio_bucket
 
-SUBSETPORTION = 0.2
+BATCH_SIZE = 2000
 
 with DAG(
     dag_id='prepare_data',
     description='Prepare data from raw_data directory',
     tags=['Rakuten'],
-    schedule=None,
+    schedule="*/5 * * * *",
     default_args={
         'owner': 'airflow',
         "start_date": datetime(2025, 6, 15),
@@ -25,7 +25,7 @@ with DAG(
         op_kwargs={
             'csv_path': "/opt/airflow/raw_data/x_train.csv",
             'table_name': "x_train",
-            'portion': SUBSETPORTION
+            'num_rows': BATCH_SIZE
         }
     )
     
@@ -45,7 +45,7 @@ with DAG(
         op_kwargs={
             'csv_path': "/opt/airflow/raw_data/y_train.csv",
             'table_name': "y_train",
-            'portion': SUBSETPORTION
+            'num_rows': BATCH_SIZE
         }
     )
     
