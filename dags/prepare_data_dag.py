@@ -10,7 +10,7 @@ with DAG(
     dag_id='prepare_data',
     description='Prepare data from raw_data directory',
     tags=['Rakuten'],
-    schedule="*/5 * * * *",
+    schedule="*/15 * * * *",
     default_args={
         'owner': 'airflow',
         "start_date": datetime(2025, 6, 15),

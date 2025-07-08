@@ -13,13 +13,14 @@ with DAG(
     dag_id='ml_pipeline_docker',
     description='Machine Learning pipeline using Docker containers for Rakuten product classification',
     tags=['Rakuten', 'ML', 'MLOps', 'Docker'],
-    schedule="*/5 * * * *",
+    schedule="*/15 * * * *",
     default_args={
         'owner': 'airflow',
         'start_date': datetime(2025, 6, 19),
         'retries': 1,
     },
     catchup=False,
+    max_active_runs=1,
     doc_md="""
     # ML Pipeline DAG (Docker Version)
     
