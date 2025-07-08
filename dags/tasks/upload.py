@@ -14,15 +14,23 @@ engine = create_engine("postgresql+psycopg2://rakutenadmin:rakutenadmin@postgres
 #     aws_access_key_id=conn.login,
 #     aws_secret_access_key=conn.password,
 # )
-def load_x_to_pg(csv_path, table_name, num_rows):
+def load_x_to_pg(csv_path, table_name,start_row=None, end_row=None):
     df = pd.read_csv(csv_path, skiprows=1, names=[
         "id", "designation", "description", "productid", "imageid"
     ])
 
-    num_rows = min(max(num_rows, 0), len(df))
-    df_to_import = df.iloc[:num_rows]
-    df_remaining = df.iloc[num_rows:]
+    total_rows = len(df)
+    
+    start_row = 0 if start_row is None else max(0, start_row)
+    end_row = total_rows if end_row is None else min(end_row, total_rows)
 
+    if start_row >= end_row:
+        print("Invalid row range: start_row must be less than end_row.")
+        return
+
+    df_to_import = df.iloc[start_row:end_row]
+    df_remaining = pd.concat([df.iloc[:start_row], df.iloc[end_row:]], ignore_index=True)
+    
     metadata = MetaData(bind=engine)
 
     Table(
@@ -39,15 +47,26 @@ def load_x_to_pg(csv_path, table_name, num_rows):
     df_to_import.to_sql(table_name, engine, if_exists="append", index=False)
 
     df_remaining.to_csv(csv_path, index=False)
+    
+    print(f"Imported rows {start_row} to {end_row} ({len(df_to_import)} rows). Remaining {len(df_remaining)} rows saved to CSV.")
 
-def load_y_to_pg(csv_path, table_name, num_rows):
+
+def load_y_to_pg(csv_path, table_name,start_row=None, end_row=None):
     df = pd.read_csv(csv_path, skiprows=1, names=[
         "id", "prdtypecode"
     ])
 
-    num_rows = min(max(num_rows, 0), len(df))
-    df_to_import = df.iloc[:num_rows]
-    df_remaining = df.iloc[num_rows:]
+    total_rows = len(df)
+    
+    start_row = 0 if start_row is None else max(0, start_row)
+    end_row = total_rows if end_row is None else min(end_row, total_rows)
+
+    if start_row >= end_row:
+        print("Invalid row range: start_row must be less than end_row.")
+        return
+
+    df_to_import = df.iloc[start_row:end_row]
+    df_remaining = pd.concat([df.iloc[:start_row], df.iloc[end_row:]], ignore_index=True)
     
     metadata = MetaData(bind=engine)
 
@@ -56,13 +75,16 @@ def load_y_to_pg(csv_path, table_name, num_rows):
         Column("id", Integer, primary_key=True),
         Column("prdtypecode", Integer),
     )
-    
+
     metadata.create_all()
-    
+
     df_to_import.to_sql(table_name, engine, if_exists="append", index=False)
 
     df_remaining.to_csv(csv_path, index=False)
     
+    print(f"Imported rows {start_row} to {end_row} ({len(df_to_import)} rows). Remaining {len(df_remaining)} rows saved to CSV.")
+
+
 def drop_pg_tables(table_names: list):
     metadata = MetaData(bind=engine)
     inspector = inspect(engine)

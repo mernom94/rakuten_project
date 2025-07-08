@@ -25,7 +25,7 @@ with DAG(
         op_kwargs={
             'csv_path': "/opt/airflow/raw_data/x_train.csv",
             'table_name': "x_train",
-            'num_rows': BATCH_SIZE
+            'end_row': BATCH_SIZE
         }
     )
     
@@ -45,7 +45,7 @@ with DAG(
         op_kwargs={
             'csv_path': "/opt/airflow/raw_data/y_train.csv",
             'table_name': "y_train",
-            'num_rows': BATCH_SIZE
+            'end_row': BATCH_SIZE
         }
     )
     
