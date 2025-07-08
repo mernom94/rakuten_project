@@ -1,0 +1,32 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements files
+COPY requirements_api.txt .
+COPY containers/rakuten-ml/requirements_ml.txt ./requirements_ml.txt
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements_api.txt
+RUN pip install --no-cache-dir -r requirements_ml.txt
+
+# Copy the specific main.py file explicitly
+COPY main.py /app/main.py
+
+# Copy the ML prediction module
+COPY containers/rakuten-ml/ /app/containers/rakuten-ml/
+
+# Copy models directory
+COPY models/ /app/models/
+
+# Copy processed_data directory  
+COPY processed_data/ /app/processed_data/
+
+EXPOSE 8000
+
+CMD ["python", "main.py"]

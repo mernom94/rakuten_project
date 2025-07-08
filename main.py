@@ -5,6 +5,13 @@ import logging
 import mlflow
 import mlflow.pyfunc
 import pandas as pd
+import os
+import subprocess
+import json as json_lib
+import psutil
+import sys
+sys.path.append('/app/containers/rakuten-ml')
+from predict import predict_single
 
 # Set MLflow Tracking URI
 mlflow.set_tracking_uri("http://mlflow:5000")  
@@ -32,11 +39,12 @@ class TrainingResponse(BaseModel):
     metrics: Dict[str, float] = {}
 
 class PredictionRequest(BaseModel):
-    data: List[Dict[str, Any]]
-    model_id: str = None 
+    title: str = ""
+    description: str = ""
+    model_id: str = None
 
 class PredictionResponse(BaseModel):
-    predictions: List[Any]
+    predictions: List[Dict[str, Any]]
     model_id: str
     status: str
 
@@ -81,7 +89,6 @@ async def trigger_training(request: TrainingRequest, background_tasks: Backgroun
         training_status["is_training"] = True
         logger.info("Starting training...")
 
-
         # For now, simulate a training run and log a dummy model
         import tempfile
         from sklearn.linear_model import LogisticRegression
@@ -122,21 +129,31 @@ async def get_training_status():
 @app.post("/predict/", response_model=PredictionResponse)
 async def make_prediction(request: PredictionRequest):
     try:
-        model_id = request.model_id or "rakuten_classifier"
-        model_uri = f"models:/{model_id}/latest"
-
-        logger.info(f"Loading model from MLflow: {model_uri}")
-        model = mlflow.pyfunc.load_model(model_uri)
-
-        input_df = pd.DataFrame(request.data)
-        preds = model.predict(input_df).tolist()
-
+        if not request.title and not request.description:
+            raise HTTPException(status_code=400, detail="Either title or description must be provided")
+        
+        logger.info(f"Making prediction for title: '{request.title}', description: '{request.description[:50]}...'")
+        
+        # SIMPLE: Call the function directly instead of Docker subprocess
+        ml_response = predict_single(request.title, request.description)
+        
+        # Check for errors
+        if "error" in ml_response:
+            raise HTTPException(status_code=500, detail=f"ML prediction error: {ml_response['error']}")
+        
+        # Format response 
+        formatted_prediction = {
+            "category": ml_response["category"],
+            "confidence": ml_response["confidence"],
+            "top_3": ml_response["top_3"]
+        }
+        
         return PredictionResponse(
-            predictions=preds,
-            model_id=model_id,
+            predictions=[formatted_prediction],
+            model_id=request.model_id or "rakuten_classifier",
             status="success"
         )
-
+        
     except Exception as e:
         logger.error(f"Prediction failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")

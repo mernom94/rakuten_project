@@ -396,6 +396,24 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: rakuten-fastapi
+    ports:
+      - "8000:8000"
+    networks:
+      - default
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - mlflow
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
+
 volumes:
   postgres-db-volume:
   pgadmin_data:
