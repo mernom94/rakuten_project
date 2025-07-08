@@ -1,19 +1,19 @@
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, inspect
 from airflow.hooks.base import BaseHook
 import pandas as pd
-import boto3
-import os
+# import boto3
+# import os
 
 engine = create_engine("postgresql+psycopg2://rakutenadmin:rakutenadmin@postgres:5432/rakuten_db")
 
-conn = BaseHook.get_connection('minio_default')
+# conn = BaseHook.get_connection('minio_default')
 
-s3 = boto3.client(
-    's3',
-    endpoint_url=f"http://{conn.host}:{conn.port}",
-    aws_access_key_id=conn.login,
-    aws_secret_access_key=conn.password,
-)
+# s3 = boto3.client(
+#     's3',
+#     endpoint_url=f"http://{conn.host}:{conn.port}",
+#     aws_access_key_id=conn.login,
+#     aws_secret_access_key=conn.password,
+# )
 def load_x_to_pg(csv_path, table_name, num_rows):
     df = pd.read_csv(csv_path, skiprows=1, names=[
         "id", "designation", "description", "productid", "imageid"
@@ -62,6 +62,18 @@ def load_y_to_pg(csv_path, table_name, num_rows):
     df_to_import.to_sql(table_name, engine, if_exists="append", index=False)
 
     df_remaining.to_csv(csv_path, index=False)
+    
+def drop_pg_tables(table_names: list):
+    metadata = MetaData(bind=engine)
+    inspector = inspect(engine)
+
+    for table_name in table_names:
+        if inspector.has_table(table_name):
+            table = Table(table_name, metadata, autoload_with=engine)
+            table.drop(engine)
+            print(f"Dropped table: {table_name}")
+        else:
+            print(f"Table '{table_name}' does not exist, skipping.")
     
 # def load_x_to_pg(csv_path, table_name, portion):
 #     df = pd.read_csv(csv_path, skiprows=1, names=[
