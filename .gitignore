@@ -7,3 +7,4 @@ processed_data/
 /dags/tasks/__pycache__
 models/*
 !models/.gitkeep
+/containers/rakuten-ml/__pycache__
