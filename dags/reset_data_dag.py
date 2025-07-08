@@ -6,7 +6,7 @@ from tasks.download import download_raw_data
 from tasks.upload import drop_pg_tables 
 
 with DAG(
-    dag_id='reset data',
+    dag_id='reset_data',
     description='reset raw data from Internet',
     tags=['Rakuten'],
     schedule=None,
