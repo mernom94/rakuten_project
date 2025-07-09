@@ -4,6 +4,10 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 from docker.types import Mount
 import os
+import os
+import subprocess
+from  datetime import datetime
+
 
 # Read Project root from .env
 PROJECT_ROOT = os.environ.get('AIRFLOW_PROJECT_ROOT') 
@@ -148,6 +152,34 @@ with DAG(
         - Evaluation using weighted F1 score
         """
     )
+
+    drift_detection = DockerOperator(
+        task_id='drift_detection_docker',
+        image='rakuten-ml:latest',  # your ML Docker image with needed libs
+        command='python scripts/drift_detection.py',
+        docker_url='unix://var/run/docker.sock',
+        network_mode='rakuten_project_default',  # same network as other tasks
+        mounts=[
+            Mount(source=f'{PROJECT_ROOT}/processed_data', target='/app/processed_data', type='bind'),
+            Mount(source=f'{PROJECT_ROOT}/models', target='/app/models', type='bind'),
+            Mount(source=f'{PROJECT_ROOT}/scripts', target='/app/scripts', type='bind'),
+        ],
+        environment={
+            'PYTHONPATH': '/app',
+            'PYTHONUNBUFFERED': '1',
+        },
+        auto_remove='success',
+        mount_tmp_dir=False,
+        dag=dag,  # if you want to assign the DAG explicitly here
+        doc_md="""
+        ## Drift Detection Docker Task
+
+        Runs drift_detection.py inside the ML container:
+        - Uses processed data and models from mounted volumes
+        - Saves drift reports to mounted folder
+        """
+    )
+
     
     # Define task dependencies
-    environment_check >> preprocessing_docker >> training_docker
+    environment_check >> preprocessing_docker >> training_docker >> drift_detection
