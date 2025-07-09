@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, inspect
 from airflow.hooks.base import BaseHook
 import pandas as pd
+import numpy as np
 # import boto3
 # import os
 
@@ -14,27 +15,50 @@ engine = create_engine("postgresql+psycopg2://rakutenadmin:rakutenadmin@postgres
 #     aws_access_key_id=conn.login,
 #     aws_secret_access_key=conn.password,
 # )
-def load_x_to_pg(csv_path, table_name,start_row=None, end_row=None):
-    df = pd.read_csv(csv_path, skiprows=1, names=[
+def stratified_sample_df(df, label_col, frac=0.1, random_state=13):
+    np.random.seed(random_state)
+    sampled_indices = []
+
+    for cls in df[label_col].unique():
+        cls_df = df[df[label_col] == cls]
+        n_sample = max(1, int(len(cls_df) * frac))
+        sampled = cls_df.sample(n=n_sample, replace=False, random_state=random_state)
+        sampled_indices.extend(sampled.index)
+
+    return df.loc[sampled_indices], df.drop(sampled_indices)
+
+def load_xy_to_pg(x_path, y_path, x_table, y_table, method='range', start_row=None, end_row=None, frac=0.1):
+    
+    df_x = pd.read_csv(x_path, skiprows=1, names=[
         "id", "designation", "description", "productid", "imageid"
     ])
+    df_y = pd.read_csv(y_path, skiprows=1, names=["id", "prdtypecode"])
 
-    total_rows = len(df)
-    
-    start_row = 0 if start_row is None else max(0, start_row)
-    end_row = total_rows if end_row is None else min(end_row, total_rows)
+    df = pd.merge(df_x, df_y, on="id")
 
-    if start_row >= end_row:
-        print("Invalid row range: start_row must be less than end_row.")
-        return
+    if method == 'sample':
+        df_sampled, df_remaining = stratified_sample_df(df, label_col="prdtypecode", frac=frac)
+    else:
+        total_rows = len(df)
+        start_row = 0 if start_row is None else max(0, start_row)
+        end_row = total_rows if end_row is None else min(end_row, total_rows)
 
-    df_to_import = df.iloc[start_row:end_row]
-    df_remaining = pd.concat([df.iloc[:start_row], df.iloc[end_row:]], ignore_index=True)
-    
+        if start_row >= end_row:
+            print("Invalid row range.")
+            return
+
+        df_sampled = df.iloc[start_row:end_row]
+        df_remaining = pd.concat([df.iloc[:start_row], df.iloc[end_row:]], ignore_index=True)
+
+    # Split X and Y
+    df_x_sampled = df_sampled[["id", "designation", "description", "productid", "imageid"]]
+    df_y_sampled = df_sampled[["id", "prdtypecode"]]
+
+    # ========== Write PostgreSQL ==========
     metadata = MetaData(bind=engine)
 
     Table(
-        table_name, metadata,
+        x_table, metadata,
         Column("id", Integer, primary_key=True),
         Column("designation", String),
         Column("description", String),
@@ -42,48 +66,22 @@ def load_x_to_pg(csv_path, table_name,start_row=None, end_row=None):
         Column("imageid", String),
     )
 
-    metadata.create_all()
-
-    df_to_import.to_sql(table_name, engine, if_exists="append", index=False)
-
-    df_remaining.to_csv(csv_path, index=False)
-    
-    print(f"Imported rows {start_row} to {end_row} ({len(df_to_import)} rows). Remaining {len(df_remaining)} rows saved to CSV.")
-
-
-def load_y_to_pg(csv_path, table_name,start_row=None, end_row=None):
-    df = pd.read_csv(csv_path, skiprows=1, names=[
-        "id", "prdtypecode"
-    ])
-
-    total_rows = len(df)
-    
-    start_row = 0 if start_row is None else max(0, start_row)
-    end_row = total_rows if end_row is None else min(end_row, total_rows)
-
-    if start_row >= end_row:
-        print("Invalid row range: start_row must be less than end_row.")
-        return
-
-    df_to_import = df.iloc[start_row:end_row]
-    df_remaining = pd.concat([df.iloc[:start_row], df.iloc[end_row:]], ignore_index=True)
-    
-    metadata = MetaData(bind=engine)
-
     Table(
-        table_name, metadata,
+        y_table, metadata,
         Column("id", Integer, primary_key=True),
         Column("prdtypecode", Integer),
     )
 
     metadata.create_all()
 
-    df_to_import.to_sql(table_name, engine, if_exists="append", index=False)
+    df_x_sampled.to_sql(x_table, engine, if_exists="append", index=False)
+    df_y_sampled.to_sql(y_table, engine, if_exists="append", index=False)
 
-    df_remaining.to_csv(csv_path, index=False)
-    
-    print(f"Imported rows {start_row} to {end_row} ({len(df_to_import)} rows). Remaining {len(df_remaining)} rows saved to CSV.")
+    # ========== Write back CSV ==========
+    df_remaining[["id", "designation", "description", "productid", "imageid"]].to_csv(x_path, index=False)
+    df_remaining[["id", "prdtypecode"]].to_csv(y_path, index=False)
 
+    print(f"[{method.upper()}] Imported {len(df_sampled)} rows. Remaining {len(df_remaining)} saved to CSV.")
 
 def drop_pg_tables(table_names: list):
     metadata = MetaData(bind=engine)

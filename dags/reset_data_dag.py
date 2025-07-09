@@ -3,7 +3,9 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 from tasks.download import download_raw_data
 # from tasks.utils import unzip_file
-from tasks.upload import load_x_to_pg, load_y_to_pg, drop_pg_tables
+from tasks.upload import load_xy_to_pg, drop_pg_tables
+
+TEST_SET_FRACTION = 0.05
 
 with DAG(
     dag_id='reset_data',
@@ -28,25 +30,18 @@ with DAG(
     )
     
     task_3 = PythonOperator(
-        task_id='split_x_test',
-        python_callable=load_x_to_pg,
+        task_id='split_xy_test',
+        python_callable=load_xy_to_pg,
         op_kwargs={
-            'csv_path': "/opt/airflow/raw_data/x_train.csv",
-            'table_name': "x_test",
-            'start_row': 80000
+            'x_path': "/opt/airflow/raw_data/x_train.csv",
+            'y_path': "/opt/airflow/raw_data/y_train.csv",
+            'x_table': "x_test",
+            'y_table': "y_test",
+            'method': "sample",
+            'frac': TEST_SET_FRACTION
         }
     )
-    
-    task_4 = PythonOperator(
-        task_id='split_y_test',
-        python_callable=load_y_to_pg,
-        op_kwargs={
-            'csv_path': "/opt/airflow/raw_data/y_train.csv",
-            'table_name': "y_test",
-            'start_row': 80000
-        }
-        
-    )
+
     # task_2 = PythonOperator(
     #     task_id='unzip_image',
     #     python_callable= unzip_file,
@@ -56,4 +51,4 @@ with DAG(
     #     }  
     # )
     
-    task_1 >> task_2 >> [task_3, task_4]
+    task_1 >> task_2 >> task_3
