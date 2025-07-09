@@ -15,8 +15,10 @@ nltk>=3.8.0
 psycopg2-binary>=2.9.0
 SQLAlchemy>=2.0.0
 
-# MLflow (for when marie's setup is ready)
+# MLflow & evidently (for when marie's setup is ready)
 mlflow>=2.8.0
+evidently==0.6.7
 
 # Utilities
 tqdm>=4.65.0
+
