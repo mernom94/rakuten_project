@@ -14,6 +14,9 @@ echo "PROJECT_ROOT=$PROJECT_ROOT" >> "$ENV_FILE"
 echo "Building Docker image for Rakuten ML..."
 docker build -t rakuten-ml "$PROJECT_ROOT/containers/rakuten-ml"
 
+echo "Building Docker image for drift detection..."
+docker build -t drift_detection "$PROJECT_ROOT/drift_detection"
+
 cd "$PROJECT_ROOT"
 echo "Starting Docker Compose services..."
 docker compose up -d

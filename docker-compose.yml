@@ -414,6 +414,19 @@ services:
       - PYTHONPATH=/app
     restart: unless-stopped
 
+  drift_detection:
+    <<: *airflow-common
+    container_name: drift_detection
+    command: >
+      bash -c "python /opt/airflow/drift_detection/drift_detection.py"
+    volumes:
+      - ./drift_detection:/opt/airflow/drift_detection
+      - ./models:/opt/airflow/models
+      - ./data:/opt/airflow/data
+      - ./containers/rakuten-ml:/opt/airflow/containers/rakuten-ml
+
+
+
 volumes:
   postgres-db-volume:
   pgadmin_data:
