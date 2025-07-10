@@ -396,26 +396,66 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-  fastapi:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: rakuten-fastapi
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus
     ports:
-      - "8000:8000"
-    networks:
-      - default
+      - "9090:9090"
     volumes:
-      - .:/app
-    depends_on:
-      - postgres
-      - mlflow
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/dashboards
     environment:
-      - PYTHONPATH=/app
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_DEFAULT_THEME: light
+      GF_FEATURE_TOGGLES_ENABLE: "publicDashboards"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    
+  statsd-exporter:
+    image: prom/statsd-exporter
+    ports:
+      - "9102:9102"        # HTTP web endpoint
+      - "8125:8125/udp"    # StatsD UDP port exposed to host
+    command:
+      - "--statsd.listen-udp=:8125"
+      - "--web.listen-address=:9102"
+    restart: always
+
+
+
 
 volumes:
   postgres-db-volume:
   pgadmin_data:
   minio_data:
   mlflow_data:
+  prometheus_data:
+  grafana_data:

@@ -25,6 +25,13 @@ from collections import Counter
 import mlflow
 import mlflow.sklearn
 
+try:
+    from statsd import StatsClient
+    statsd = StatsClient(host="statsd-exporter", port=8125, prefix="mlflow")
+except ImportError:
+    statsd = None
+    print("⚠️  'statsd' package not installed. Metrics will not be exported to Prometheus.")
+    
 # Directories
 PROCESSED_DATA_DIR = 'processed_data'
 MODELS_DIR = 'models'
@@ -207,6 +214,14 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
         "test_accuracy": float(test_accuracy)
     })
     
+        # Send metrics to StatsD (Prometheus)
+    if statsd:
+        statsd.incr("experiment_run_total")  # Increment total runs
+        statsd.gauge("accuracy", test_accuracy)
+        statsd.gauge("f1", test_f1)
+        statsd.gauge("cv", grid_search.best_score_)
+
+    
     return results
 
 def save_gridsearch_model(results, preprocessing_metadata, text_version='text_classical'):
@@ -321,5 +336,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
