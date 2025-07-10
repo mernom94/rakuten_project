@@ -30,6 +30,13 @@ from mlflow.exceptions import RestException
 PROCESSED_DATA_DIR = 'processed_data'
 MODELS_DIR = 'models'
 
+try:
+    from statsd import StatsClient
+    statsd = StatsClient(host="statsd-exporter", port=8125, prefix="mlflow")
+except ImportError:
+    statsd = None
+    print("⚠️  'statsd' package not installed. Metrics will not be exported to Prometheus.")
+
 mlflow.set_tracking_uri("http://mlflow:5000")
 mlflow.set_experiment("RakutenTraining")
 
@@ -236,6 +243,13 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
         "eval_accuracy": float(eval_accuracy),
         "n_samples": int(n_samples)
     })
+    
+    # Send metrics to StatsD (Prometheus)
+    if statsd:
+        statsd.incr("experiment_run_total")  # Increment total runs
+        statsd.gauge("accuracy", test_accuracy)
+        statsd.gauge("f1", test_f1)
+        statsd.gauge("cv", grid_search.best_score_)
     
     return results
 
