@@ -301,7 +301,7 @@ def save_gridsearch_model(results, preprocessing_metadata, text_version='text_cl
     
     return model_metadata
 
-def register_if_best_model(results, model_path, registered_model_name="TheBestModelTillNow"):
+def register_if_best_model(results, registered_model_name="TheBestModelTillNow"):
     """
     Register model only if eval_f1 is better than current production model
     """
@@ -353,6 +353,15 @@ def register_if_best_model(results, model_path, registered_model_name="TheBestMo
             archive_existing_versions=True
         )
         print(f"Model registered and transitioned to Production (version {result.version})")
+        
+        best_model_path = os.path.join(MODELS_DIR, 'the_best_model.pkl')
+        best_encoder_path = os.path.join(MODELS_DIR, 'the_label_encoder.pkl')
+        
+        with open(best_model_path, 'wb') as f_model:
+            pickle.dump(results['best_estimator'], f_model)
+
+        with open(best_encoder_path, 'wb') as f_enc:
+            pickle.dump(results['label_encoder'], f_enc)
     else:
         print(f"New model eval_f1 ({new_eval_f1:.4f}) is not better than current ({current_eval_f1:.4f}). Not registering.")
 

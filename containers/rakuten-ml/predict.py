@@ -22,18 +22,21 @@ def load_category_mapping():
         return {}
 
 def load_latest_model_and_encoder():
-    """Load the most recent trained model and label encoder"""
+    # """Load the most recent trained model and label encoder"""
     
-    # Find latest model files by timestamp
-    model_files = glob.glob('models/best_model_gridsearch_*.pkl')
-    encoder_files = glob.glob('models/label_encoder_*.pkl')
+    # # Find latest model files by timestamp
+    # model_files = glob.glob('models/best_model_gridsearch_*.pkl')
+    # encoder_files = glob.glob('models/label_encoder_*.pkl')
     
-    if not model_files or not encoder_files:
-        raise FileNotFoundError("Missing model files. Make sure training has been completed.")
+    # if not model_files or not encoder_files:
+    #     raise FileNotFoundError("Missing model files. Make sure training has been completed.")
     
-    # Get the latest files (by timestamp in filename)
-    latest_model = sorted(model_files)[-1]
-    latest_encoder = sorted(encoder_files)[-1]
+    # # Get the latest files (by timestamp in filename)
+    # latest_model = sorted(model_files)[-1]
+    # latest_encoder = sorted(encoder_files)[-1]
+    
+    latest_model = 'models/the_best_model.pkl'
+    latest_encoder = 'models/the_label_encoder.pkl'
     
     print(f"Loading model: {latest_model}")
     print(f"Loading encoder: {latest_encoder}")
