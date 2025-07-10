@@ -53,6 +53,14 @@ def load_latest_processed_data():
     
     return text_df, metadata
 
+def load_eval_data():
+    with open(os.path.join(PROCESSED_DATA_DIR, 'preprocessing_metadata_test.json'), 'r') as f:
+        metadata = json.load(f)
+    text_df = pd.read_csv(metadata['text_path'])
+    print(f"Loaded {len(text_df)} samples")
+    print(f"Available text versions: {list(text_df.columns)}")
+    return text_df, metadata
+
 def print_class_distribution(y, dataset_name):
     """Print class distribution for analysis"""
     # Count the occurrences of each class
@@ -140,7 +148,7 @@ def create_pipeline_and_param_grid():
     
     return pipeline, param_grid
 
-def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid):
+def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid, X_eval, y_eval):
     """Train models using GridSearchCV"""
     print("Starting GridSearchCV training...")
     print("This may take some time depending on the parameter grid size...")
@@ -149,6 +157,7 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
     label_encoder = LabelEncoder()
     y_train_encoded = label_encoder.fit_transform(y_train)
     y_test_encoded = label_encoder.transform(y_test)
+    y_eval_encoded = label_encoder.transform(y_eval)  # added for eval
     
     # Perform grid search with weighted F1 score
     grid_search = GridSearchCV(
@@ -191,12 +200,27 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
     print("\nClassification Report on Test Set:")
     print(classification_report(y_test, y_test_pred))
     
+    # Predict on the evaluation set
+    y_eval_pred_encoded = grid_search.best_estimator_.predict(X_eval)
+    y_eval_pred = label_encoder.inverse_transform(y_eval_pred_encoded)
+
+    # Calculate eval metrics
+    eval_f1 = f1_score(y_eval, y_eval_pred, average='weighted')
+    eval_accuracy = accuracy_score(y_eval, y_eval_pred)
+    
+    print(f"\nEval Set Weighted F1 Score: {eval_f1:.4f}")
+    print(f"Eval Set Accuracy: {eval_accuracy:.4f}")
+    print("\nClassification Report on Eval Set:")
+    print(classification_report(y_eval, y_eval_pred))
+    
     # Prepare results
     results = {
         'best_params': grid_search.best_params_,
         'best_cv_score': grid_search.best_score_,
         'test_f1_score': test_f1,
         'test_accuracy': test_accuracy,
+        'eval_f1_score': eval_f1,
+        'eval_accuracy': eval_accuracy,
         'label_encoder': label_encoder,
         'best_estimator': grid_search.best_estimator_
     }
@@ -204,7 +228,9 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
     mlflow.log_metrics({
         "cv_score": float(grid_search.best_score_),
         "test_f1": float(test_f1),
-        "test_accuracy": float(test_accuracy)
+        "test_accuracy": float(test_accuracy),
+        "eval_f1": float(eval_f1),
+        "eval_accuracy": float(eval_accuracy)
     })
     
     return results
@@ -281,10 +307,14 @@ def main():
         try:
             # Step 1: Load preprocessed data
             text_df, preprocessing_metadata = load_latest_processed_data()
+            text_df_eval, preprocessing_metadata_eval = load_eval_data()
             
             # Step 2: Extract features and target (using classical ML text)
             X = text_df['text_classical']  # Use heavily preprocessed text
             y = text_df['prdtypecode']
+            
+            X_eval = text_df_eval['text_classical']
+            y_eval = text_df_eval['prdtypecode']
             
             print(f"Using text_classical for training ({len(X)} samples)")
             
@@ -295,7 +325,7 @@ def main():
             pipeline, param_grid = create_pipeline_and_param_grid()
             
             # Step 5: Train with GridSearchCV
-            results = train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid)
+            results = train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid, X_eval, y_eval)
             
             # Step 6: Save best model
             model_metadata = save_gridsearch_model(results, preprocessing_metadata)
