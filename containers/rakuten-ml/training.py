@@ -209,6 +209,8 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
     eval_f1 = f1_score(y_eval, y_eval_pred, average='weighted')
     eval_accuracy = accuracy_score(y_eval, y_eval_pred)
     
+    n_samples = len(X_train) + len(X_test)
+    
     print(f"\nEval Set Weighted F1 Score: {eval_f1:.4f}")
     print(f"Eval Set Accuracy: {eval_accuracy:.4f}")
     print("\nClassification Report on Eval Set:")
@@ -231,7 +233,8 @@ def train_with_gridsearch(X_train, X_test, y_train, y_test, pipeline, param_grid
         "test_f1": float(test_f1),
         "test_accuracy": float(test_accuracy),
         "eval_f1": float(eval_f1),
-        "eval_accuracy": float(eval_accuracy)
+        "eval_accuracy": float(eval_accuracy),
+        "n_samples": int(n_samples)
     })
     
     return results
