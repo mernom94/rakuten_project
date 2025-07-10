@@ -1,0 +1,9 @@
+/raw_data
+/venv
+/logs
+/dags/__pycache__
+/dags/tasks/__pycache__models/
+processed_data/
+/dags/tasks/__pycache__
+models/*
+!models/.gitkeep

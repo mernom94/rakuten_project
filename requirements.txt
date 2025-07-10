@@ -1,0 +1,50 @@
+# Core ML and Data Processing
+pandas==2.3.0
+numpy==2.3.0
+scikit-learn==1.7.0
+xgboost==3.0.2
+
+# Database (PostgreSQL) and Object Storage (MinIO)
+psycopg2-binary==2.9.10
+SQLAlchemy==2.0.41
+minio==7.2.15
+
+# Image Processing
+pillow==11.2.1
+
+# API Framework
+fastapi==0.115.12
+uvicorn==0.34.3
+
+# MLOps and Experiment Tracking
+mlflow==3.1.0
+statsd==4.0.1
+
+# Testing (required for Phase 1)
+pytest==8.4.0
+pytest-asyncio==1.0.0  # For testing async FastAPI endpoints
+
+# Data Processing Utilities
+tqdm==4.67.1  # Progress bars for data loading
+
+# Security and Utilities
+argon2-cffi==25.1.0  # Password hashing
+pycryptodome==3.23.0  # Cryptographic functions
+
+# ---------- OPTIONAL / NICE-TO-HAVE ----------
+# The packages below are useful for local development but may not be needed
+# if using Qi's full Docker containerized setup
+
+# Configuration Management
+python-dotenv>=1.0.0    # Load environment variables from .env files (for secrets, config)
+
+# HTTP Client
+requests>=2.31.0        # Make HTTP requests (useful for testing your own API)
+
+# Code Quality and Formatting (for local development)
+black>=23.0.0           # Automatic code formatter (ensures consistent code style)
+flake8>=6.0.0          # Code linter (finds style issues and potential bugs)
+
+# Note: If using Docker containers for development, these tools can be run inside containers instead
+# Natural Language Processing
+nltk==3.8.1
