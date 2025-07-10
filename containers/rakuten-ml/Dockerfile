@@ -24,6 +24,7 @@ RUN python -c "import nltk; nltk.download('stopwords', quiet=True)"
 # Copy ML scripts
 COPY training.py ./scripts/training.py
 COPY preprocessing.py ./scripts/preprocessing.py
+COPY preprocessing_test_data.py ./scripts/preprocessing_test_data.py
 COPY drift_detection.py ./scripts/drift_detection.py
 
 # Create directories for data and models
