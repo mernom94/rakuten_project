@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, inspect
 from airflow.hooks.base import BaseHook
+from sqlalchemy import text
 import pandas as pd
 import numpy as np
 # import boto3
@@ -94,7 +95,33 @@ def drop_pg_tables(table_names: list):
             print(f"Dropped table: {table_name}")
         else:
             print(f"Table '{table_name}' does not exist, skipping.")
-    
+
+def read_metrics(**kwargs):
+    with engine.connect() as connection:
+        n_samples = connection.execute(text("""
+            SELECT value FROM metrics WHERE key = 'n_samples'
+            ORDER BY timestamp DESC LIMIT 1;
+        """)).fetchone()
+        n_samples = int(n_samples[0]) if n_samples else 0
+
+        eval_f1 = connection.execute(text("""
+            SELECT value FROM model_version_tags WHERE key = 'eval_f1'
+            ORDER BY version DESC LIMIT 1;
+        """)).fetchone()
+        eval_f1 = float(eval_f1[0]) if eval_f1 else 0.0
+
+        x_count = connection.execute(text("""
+            SELECT COUNT(*) FROM x_train;
+        """)).fetchone()
+        x_count = int(x_count[0]) if x_count else 0
+
+        print(f"n_samples={n_samples}, eval_f1={eval_f1}, x_count={x_count}")
+
+        return {
+            'n_samples': n_samples,
+            'eval_f1': eval_f1,
+            'x_count': x_count
+        }   
 # def load_x_to_pg(csv_path, table_name, portion):
 #     df = pd.read_csv(csv_path, skiprows=1, names=[
 #         "id", "designation", "description", "productid", "imageid"
