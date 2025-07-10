@@ -24,6 +24,7 @@ from scipy.sparse import load_npz
 from collections import Counter
 import mlflow
 import mlflow.sklearn
+from mlflow.exceptions import RestException
 
 # Directories
 PROCESSED_DATA_DIR = 'processed_data'
@@ -297,6 +298,61 @@ def save_gridsearch_model(results, preprocessing_metadata, text_version='text_cl
     
     return model_metadata
 
+def register_if_best_model(results, model_path, registered_model_name="TheBestModelTillNow"):
+    """
+    Register model only if eval_f1 is better than current production model
+    """
+    client = mlflow.tracking.MlflowClient()
+    new_eval_f1 = results["eval_f1_score"]
+    new_eval_accuracy = results["eval_accuracy"]
+
+    try:
+        # Get latest production model
+        latest_versions = client.get_latest_versions(registered_model_name, stages=["Production"])
+        if latest_versions:
+            current_model = latest_versions[0]
+            current_run_id = current_model.run_id
+            current_run = client.get_run(current_run_id)
+            current_eval_f1 = float(current_run.data.metrics.get("eval_f1", 0.0))
+            print(f"Current registered eval_f1: {current_eval_f1:.4f}")
+        else:
+            current_eval_f1 = 0.0
+            print("No production model registered yet.")
+
+    except RestException:
+        print(f"No registered model named '{registered_model_name}' found. Creating new one...")
+        current_eval_f1 = 0.0
+
+    if new_eval_f1 > current_eval_f1:
+        print(f"New model eval_f1 ({new_eval_f1:.4f}) is better. Registering model...")
+        model_uri = f"runs:/{mlflow.active_run().info.run_id}/model"
+        result = mlflow.register_model(model_uri, registered_model_name)
+
+        # Record model key metrics as tag
+        client.set_model_version_tag(
+            name=registered_model_name,
+            version=result.version,
+            key="eval_f1",
+            value=f"{new_eval_f1:.4f}"
+        )
+        client.set_model_version_tag(
+            name=registered_model_name,
+            version=result.version,
+            key="eval_accuracy",
+            value=f"{new_eval_accuracy:.4f}"
+        )
+        
+        # Transition to production
+        client.transition_model_version_stage(
+            name=registered_model_name,
+            version=result.version,
+            stage="Production",
+            archive_existing_versions=True
+        )
+        print(f"Model registered and transitioned to Production (version {result.version})")
+    else:
+        print(f"New model eval_f1 ({new_eval_f1:.4f}) is not better than current ({current_eval_f1:.4f}). Not registering.")
+
 def main():
     """Main training pipeline with GridSearchCV"""
     print("Starting GridSearchCV training pipeline...")
@@ -329,6 +385,9 @@ def main():
             
             # Step 6: Save best model
             model_metadata = save_gridsearch_model(results, preprocessing_metadata)
+            
+            # Step 7: Conditionally register model
+            register_if_best_model(results, model_metadata["model_path"])
             
             print("=" * 60)
             print("TRAINING COMPLETED SUCCESSFULLY!")
