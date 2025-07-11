@@ -1,10 +1,17 @@
-/raw_data
-/venv
-/logs
-/dags/__pycache__
-/dags/tasks/__pycache__models/
+# Data directories
+/raw_data/
 processed_data/
-/dags/tasks/__pycache__
+
+# Virtual environment
+/venv/
+
+# Log files
+/logs/
+
+# Python bytecode cache
+__pycache__/
+
+# Models directory (keep only .gitkeep)
 models/*
 !models/.gitkeep
 /containers/rakuten-ml/__pycache__

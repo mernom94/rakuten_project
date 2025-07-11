@@ -47,3 +47,9 @@ flake8>=6.0.0          # Code linter (finds style issues and potential bugs)
 # Note: If using Docker containers for development, these tools can be run inside containers instead
 # Natural Language Processing
 nltk==3.8.1
+
+# Web application user interface
+streamlit>=1.8.0
+
+# Flowchart visualization
+streamlit_mermaid>=0.3.0
