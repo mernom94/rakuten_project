@@ -28,7 +28,7 @@ with DAG(
         api_version='auto',
         command="python scripts/drift_detection.py",  
         docker_url='unix://var/run/docker.sock',
-        network_mode='rakuten_project-2_default',
+        network_mode='rakuten_project_default',
         mounts=[
             Mount(source=f'{PROJECT_ROOT}/processed_data', target='/app/processed_data', type='bind'),
             Mount(source=f'{PROJECT_ROOT}/models', target='/app/models', type='bind'),
