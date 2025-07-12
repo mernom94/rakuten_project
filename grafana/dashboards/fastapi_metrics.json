@@ -1,0 +1,104 @@
+{
+    "id": null,
+    "uid": null,
+    "title": "FastAPI Metrics Dashboard",
+    "tags": ["fastapi", "prometheus"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "5s",
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Total Requests",
+        "targets": [
+          {
+            "expr": "sum(increase(http_requests_total[1h]))",
+            "format": "time_series",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 3 }
+      },
+      {
+        "type": "stat",
+        "title": "Requests Per Second",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[1m]))",
+            "format": "time_series",
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 3 }
+      },
+      {
+        "type": "graph",
+        "title": "Request Latency - P95",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 3, "w": 12, "h": 6 }
+      },
+      {
+        "type": "graph",
+        "title": "Average Request Duration",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 9, "w": 12, "h": 6 }
+      },
+      {
+        "type": "graph",
+        "title": "Requests by Endpoint",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[1m])) by (handler)",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ],
+        "legend": {
+          "show": true
+        },
+        "gridPos": { "x": 0, "y": 15, "w": 12, "h": 6 }
+      },
+      {
+        "type": "graph",
+        "title": "Error Rate (4xx/5xx)",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"4..|5..\"}[1m]))",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 21, "w": 12, "h": 6 }
+      },
+      {
+        "type": "stat",
+        "title": "Requests In Progress",
+        "targets": [
+          {
+            "expr": "sum(http_requests_in_progress_total)",
+            "format": "time_series",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 27, "w": 6, "h": 3 }
+      }
+    ],
+  "overwrite": false
+}

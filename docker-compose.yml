@@ -467,6 +467,18 @@ services:
       - "--web.listen-address=:9102"
     restart: always
 
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: rakuten_project_default
+    pid: "host"           
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+
 volumes:
   postgres-db-volume:
   pgadmin_data:
